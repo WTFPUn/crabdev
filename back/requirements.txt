@@ -1,0 +1,10 @@
+starlette
+numpy
+pandas
+pydantic
+opencv-python
+requests
+supervision
+transformers
+pytorch_lightning
+fastapi
