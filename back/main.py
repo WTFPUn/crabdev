@@ -1,11 +1,11 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, Request, Response, UploadFile, File
 from imagehandler import send_image
 import numpy as np
 import cv2
 import asyncio
 import os
 from Payloadtype import LogPayload, ImageCollectionPayload
-from detector import detect_molted
+from detector import detect_molted, load_image
 from time import time
 
 
@@ -32,7 +32,8 @@ async def websocket_endpoint(websocket: WebSocket):
   idx = 0
   while True:
     start = time()
-    detected = detect_molted(image_test[idx])
+    shift_image = load_image(image_test[idx])
+    detected = detect_molted(shift_image)
     payload = ImageCollectionPayload(data=detected)
     print([d.molt for d in detected])
     await websocket.send_json(payload.model_dump_json())
@@ -41,3 +42,13 @@ async def websocket_endpoint(websocket: WebSocket):
       await asyncio.sleep(polling_time - (end - start))
     idx = (idx + 1) % len(image_test)
 
+# post method to receive image
+@app.post("/predict")
+async def image_endpoint(file: UploadFile = File(...)):
+  image = await file.read()
+  image = np.frombuffer(image, np.uint8)
+  image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+  detected = detect_molted(image)
+  print(len(detected))
+  payload = ImageCollectionPayload(data=detected)
+  return payload.model_dump_json()
